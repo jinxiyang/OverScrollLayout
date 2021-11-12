@@ -1,12 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/frameContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
 
     <com.yang.overscrolllayout.demo.MyScrollView
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:background="@color/teal_700" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="20dp"
+                android:background="@color/design_default_color_error"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="20dp"
+                android:background="@color/black"
+                />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="20dp"
+                android:background="@android:color/holo_blue_bright"
+                />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="20dp"
+                android:background="@android:color/holo_purple"
+                />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="20dp"
+                android:background="@android:color/holo_green_light"
+                />
+
+
+        </LinearLayout>
+
+    </com.yang.overscrolllayout.demo.MyScrollView>
+
+
 
 </FrameLayout>
