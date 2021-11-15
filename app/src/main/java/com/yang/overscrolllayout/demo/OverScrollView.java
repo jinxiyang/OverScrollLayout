@@ -16,7 +16,7 @@ import android.widget.OverScroller;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-public class MyScrollView extends FrameLayout {
+public class OverScrollView extends FrameLayout {
 
     private static final String TAG = "======";
 
@@ -60,8 +60,8 @@ public class MyScrollView extends FrameLayout {
     private int mMinimumVelocity;
     private int mMaximumVelocity;
 
-    private int mOverscrollDistance;
-    private int mOverflingDistance;
+    private int mOverScrollDistance;
+    private int mOverFlingDistance;
 
     private float mVerticalScrollFactor;
 
@@ -84,15 +84,15 @@ public class MyScrollView extends FrameLayout {
      */
     private static final int INVALID_POINTER = -1;
 
-    public MyScrollView(@NonNull Context context) {
+    public OverScrollView(@NonNull Context context) {
         this(context, null);
     }
 
-    public MyScrollView(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public OverScrollView(@NonNull Context context, @Nullable AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public MyScrollView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public OverScrollView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         initScrollView(context);
     }
@@ -104,8 +104,8 @@ public class MyScrollView extends FrameLayout {
         mTouchSlop = configuration.getScaledTouchSlop();
         mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
         mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
-        mOverscrollDistance = configuration.getScaledOverscrollDistance();
-        mOverflingDistance = configuration.getScaledOverflingDistance();
+        mOverScrollDistance = configuration.getScaledOverscrollDistance();
+        mOverFlingDistance = configuration.getScaledOverflingDistance();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mVerticalScrollFactor = configuration.getScaledVerticalScrollFactor();
         } else {
@@ -182,7 +182,7 @@ public class MyScrollView extends FrameLayout {
 
         int actionMasked = ev.getActionMasked();
 
-        Log.i(TAG, "onInterceptTouchEvent: 4  " + actionMasked);
+//        Log.i(TAG, "onInterceptTouchEvent: 4  " + actionMasked);
         switch (actionMasked){
 
             case MotionEvent.ACTION_DOWN:
@@ -228,7 +228,7 @@ public class MyScrollView extends FrameLayout {
                         parent.requestDisallowInterceptTouchEvent(true);
                     }
                 }
-                Log.i(TAG, "onInterceptTouchEvent: " + mIsBeingDragged);
+//                Log.i(TAG, "onInterceptTouchEvent: " + mIsBeingDragged);
                 break;
 
             case MotionEvent.ACTION_POINTER_UP:
@@ -275,7 +275,7 @@ public class MyScrollView extends FrameLayout {
         }
         vtev.offsetLocation(0, mNestedYOffset);
 
-        Log.i(TAG, "onTouchEvent: 1 " + actionMasked);
+//        Log.i(TAG, "onTouchEvent: 1 " + actionMasked);
 
         switch (actionMasked){
 
@@ -346,25 +346,22 @@ public class MyScrollView extends FrameLayout {
                 }
 
                 if (mIsBeingDragged){
-                    Log.i(TAG, "onTouchEvent: 3");
-                    
+//                    Log.i(TAG, "onTouchEvent: 3");
+
                     //纠正触摸点，去掉view嵌套滑动的位移
                     mLastMotionY = y - mScrollOffset[1];
                     //ScrollY，正值代表view的内容向坐标轴负方向移动的距离
                     int oldY = getScrollY();
                     int range = getScrollRange();
-                    int overScrollMode = getOverScrollMode();
-                    boolean canOverScroll = overScrollMode == OVER_SCROLL_ALWAYS ||
-                            (overScrollMode == OVER_SCROLL_IF_CONTENT_SCROLLS && range > 0);
+                    int height = getHeight() - getPaddingTop() - getPaddingBottom();
 
                     //滚动，不在嵌套滚动层级里时
-                    Log.i(TAG, "onTouchEvent: 4  " + deltaY + "  " + getScrollY() + "  " + range + "  " + mOverscrollDistance);
-                    if (overScrollBy(0, deltaY, 0, getScrollY(), 0, range, 0, mOverscrollDistance, true)
+//                    Log.i(TAG, "onTouchEvent: 4  " + deltaY + "  " + getScrollY() + "  " + range);
+                    if (overScrollBy(0, deltaY, 0, getScrollY(), 0, range, 0, height / 2, true)
                             && !hasNestedScrollingParent()) {
                         mVelocityTracker.clear();
-                        Log.i(TAG, "onTouchEvent: 5");
+//                        Log.i(TAG, "onTouchEvent: 5");
                     }
-
 
                     int scrolledDeltaY = getScrollY() - oldY;
                     int unconsumedY = deltaY - scrolledDeltaY;
@@ -372,23 +369,116 @@ public class MyScrollView extends FrameLayout {
                         mLastMotionY -= mScrollOffset[1];
                         vtev.offsetLocation(0, mScrollOffset[1]);
                         mNestedYOffset += mScrollOffset[1];
-                    } else if (canOverScroll){
-                        int pulledY = oldY + deltaY;
-                        if (pulledY < 0){
-
-                        } else if (pulledY > range){
-
-                        }
                     }
+                }
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                onSecondPointerUp(ev);
+                break;
+
+            case MotionEvent.ACTION_UP:
+                if (mIsBeingDragged){
+                    VelocityTracker velocityTracker = this.mVelocityTracker;
+                    velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
+
+                    //速度，正值：表明手指向坐标轴负方向移动
+                    int initialVelocity = (int) velocityTracker.getYVelocity(mActivePointerId);
+
+                    Log.i(TAG, "onTouchEvent: 6   " + mActivePointerId + "   " + initialVelocity);
+
+                    if (Math.abs(initialVelocity) > mMinimumVelocity){
+                        flingWithNestedDispatch(-initialVelocity);
+                    } else if (mScroller.springBack(getScrollX(), getScrollY(), 0, 0, 0, getScrollRange())){
+                        postInvalidateOnAnimation();
+                    }
+                    mActivePointerId = INVALID_POINTER;
+                    endDrag();
+                }
+                break;
+
+            case MotionEvent.ACTION_CANCEL:
+                if (mIsBeingDragged && getChildCount() > 0){
+                    Log.i(TAG, "onTouchEvent: 7");
+                    if (mScroller.springBack(getScrollX(), getScrollY(), 0, 0, 0, getScrollRange())){
+                        postInvalidateOnAnimation();
+                    }
+                    mActivePointerId = INVALID_POINTER;
+                    endDrag();
                 }
                 break;
 
 
         }
 
+        if (mVelocityTracker != null){
+            mVelocityTracker.addMovement(vtev);
+        }
+        vtev.recycle();
         return true;
     }
 
+    private void flingWithNestedDispatch(int velocityY){
+        int scrollY = getScrollY();
+        Log.i(TAG, "flingWithNestedDispatch: 1  " + scrollY + "   " + velocityY);
+
+        boolean canFling = (scrollY > 0 || velocityY > 0) && (scrollY < getScrollRange() || velocityY < 0);
+
+        if (!dispatchNestedPreFling(0, velocityY)) {
+            Log.i(TAG, "flingWithNestedDispatch: 2  " + canFling);
+            dispatchNestedFling(0, velocityY, canFling);
+            Log.i(TAG, "flingWithNestedDispatch: 3");
+
+//            if (canFling) {
+                fling(velocityY);
+//            }
+        }
+    }
+
+    private void fling(int velocityY) {
+        if (getChildCount() > 0){
+            int height = getHeight() - getPaddingTop() - getPaddingBottom();
+            int bottom = getChildAt(0).getHeight();
+
+            Log.i(TAG, "fling: " + velocityY);
+
+            mScroller.fling(getScrollX(), getScrollY(), 0, velocityY, 0, 0, 0,
+                    Math.max(0, bottom - height), 0, height / 2);
+
+            postInvalidateOnAnimation();
+        }
+    }
+
+    @Override
+    public void computeScroll() {
+//        Log.i(TAG, "computeScroll: 1");
+        if (mScroller.computeScrollOffset()) {
+            Log.i(TAG, "computeScroll: 2");
+
+            int oldX = getScrollX();
+            int oldY = getScrollY();
+
+            int currX = mScroller.getCurrX();
+            int currY = mScroller.getCurrY();
+
+            if (oldX != currX || oldY != currY){
+//                Log.i(TAG, "computeScroll: 3");
+                
+                int height = getHeight() - getPaddingTop() - getPaddingBottom();
+
+                overScrollBy(currX - oldX, currY - oldY, oldX, oldY, 0, getScrollRange(),
+                        0, height / 2, false);
+            }
+
+            postInvalidateOnAnimation();
+        } else {
+            Log.i(TAG, "computeScroll: 3");
+        }
+    }
+
+    private void endDrag(){
+        mIsBeingDragged = false;
+        recycleVelocityTracker();
+    }
 
     public int getScrollRange(){
         int scrollRange = 0;
@@ -396,7 +486,7 @@ public class MyScrollView extends FrameLayout {
             View child = getChildAt(0);
             int height = child.getHeight();
             int i = getHeight() - getPaddingTop() - getPaddingBottom();
-            Log.i(TAG, "getScrollRange: " + height + "  " + i);
+//            Log.i(TAG, "getScrollRange: " + height + "  " + i);
             scrollRange = Math.max(0, height - i);
         }
         return scrollRange;
@@ -424,26 +514,18 @@ public class MyScrollView extends FrameLayout {
 
     @Override
     protected int computeVerticalScrollOffset() {
-        return Math.max(0, super.computeVerticalScrollOffset());
+        return super.computeVerticalScrollOffset();
     }
 
     @Override
     protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-//        Log.i(TAG, "onOverScrolled: " + scrollY);
+        Log.i(TAG, "onOverScrolled: " + scrollY);
         if (!mScroller.isFinished()){
-            int oldX = getScrollX();
-            int oldY = getScrollY();
-            setScrollX(scrollX);
-            setScrollY(scrollY);
-            onScrollChanged(scrollX, scrollY, oldX, oldY);
+            scrollTo(scrollX, scrollY);
             Log.i(TAG, "onOverScrolled: 1");
-            if (clampedY){
-                Log.i(TAG, "onOverScrolled: 1.1");
-                mScroller.springBack(scrollX, scrollY, 0, 0, 0, getScrollRange());
-            }
         } else {
             scrollTo(scrollX, scrollY);
-            Log.i(TAG, "onOverScrolled: 2");
+            Log.i(TAG, "onOverScrolled: 2  " + scrollY);
         }
     }
 }
