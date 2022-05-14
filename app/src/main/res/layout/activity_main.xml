@@ -4,62 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-
-    <com.yang.overscrolllayout.demo.OverScrollView
+    <com.yang.overscrolllayout.demo.OverScrollLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/darker_gray"
-            android:orientation="vertical">
+            android:layout_height="match_parent"/>
 
-
-            <TextView
-                android:id="@+id/tv1"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="20dp"
-                android:background="@color/design_default_color_error"/>
-
-            <TextView
-                android:id="@+id/tv2"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="20dp"
-                android:background="@color/black"
-                />
-
-            <TextView
-                android:id="@+id/tv3"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="20dp"
-                android:background="@android:color/holo_blue_bright"
-                />
-
-            <TextView
-                android:id="@+id/tv4"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="20dp"
-                android:background="@android:color/holo_purple"
-                />
-
-            <TextView
-                android:id="@+id/tv5"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginTop="20dp"
-                android:background="@android:color/holo_green_light"
-                />
-
-
-        </LinearLayout>
-
-    </com.yang.overscrolllayout.demo.OverScrollView>
-
+    </com.yang.overscrolllayout.demo.OverScrollLayout>
 
 
 </FrameLayout>

@@ -569,7 +569,8 @@ public class OverScrollView extends FrameLayout implements NestedScrollingChild3
                 }
 
                 final int y = (int) ev.getY(activePointerIndex);
-                //触摸点位移，正值：触摸点向坐标轴负方向滑动，负值：触摸点向坐标轴正方向滑动
+                //触摸点位移(上一个点减去下一个点)，正值：触摸点向坐标轴负方向滑动，负值：触摸点向坐标轴正方向滑动
+                //这个值可以直接传给scrollBy
                 int deltaY = mLastMotionY - y;
                 if (!mIsBeingDragged && Math.abs(deltaY) > mTouchSlop){
                     final ViewParent parent = getParent();
