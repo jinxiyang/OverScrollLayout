@@ -525,6 +525,7 @@ public class OverScrollView extends FrameLayout implements NestedScrollingChild3
         if (actionMasked == MotionEvent.ACTION_DOWN){
             mNestedYOffset = 0;
         }
+        //纠正计算速度的MotionEvent，因为如果滑动距离都被NestedScrollingParent消耗了，ev的坐标对于当前view一直没变，手指实际的速度计算就错了
         vtev.offsetLocation(0, mNestedYOffset);
 
 //        Log.i(TAG, "onTouchEvent: 1 " + actionMasked);
@@ -591,7 +592,8 @@ public class OverScrollView extends FrameLayout implements NestedScrollingChild3
                 if (mIsBeingDragged){
 //                    Log.i(TAG, "onTouchEvent: 3");
 
-                    //mScrollOffset，正值：向坐标轴正方向位移
+                    //mScrollConsumed 这一次NestedScrollingParent先消耗的距离，正负代表的意义同deltaY
+                    //mScrollOffset，这一次视图移动的距离，正值：向坐标轴正方向位移
                     if (dispatchNestedPreScroll(0, deltaY, mScrollConsumed, mScrollOffset, ViewCompat.TYPE_TOUCH)){
                         //去除调嵌套机制先消费的位移
                         deltaY -= mScrollConsumed[1];
@@ -637,6 +639,7 @@ public class OverScrollView extends FrameLayout implements NestedScrollingChild3
             case MotionEvent.ACTION_UP:
                 if (mIsBeingDragged){
                     VelocityTracker velocityTracker = this.mVelocityTracker;
+                    //计算1秒的速度
                     velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
 
                     //速度，正值：表明手指向坐标轴负方向移动

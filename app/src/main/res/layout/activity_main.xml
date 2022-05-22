@@ -8,10 +8,23 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:background="@android:color/holo_blue_light"
+            android:layout_gravity="top"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:background="@android:color/holo_green_light"
+            android:layout_gravity="bottom"/>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            android:background="@android:color/darker_gray"/>
 
     </com.yang.overscrolllayout.demo.OverScrollLayout>
 
