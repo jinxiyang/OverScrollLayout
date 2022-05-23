@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
 import android.widget.OverScroller;
@@ -31,18 +32,11 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     private int mMinimumFlingVelocity;
 
-    private int mScreenHeightPixels;
-
-    private View mContentView;
-
-    //滚动view虚拟的位移距离，因为有阻尼，实际没有消耗这么多
-    private int mContentVewVirtualTranslationY = 0;
-    //滚动views实际的位移距离
-    private int mContentVewActualTranslationY = 0;
-
     private MockFlingRunnable mockFlingRunnable;
     private Runnable mOverScrollRunnable = null;
     private Runnable mSpringBackRunnable = null;
+
+    private NestedScrollingChildWrapper mNestedScrollingChild = null;
 
     public OverScrollLayout(@NonNull Context context) {
         this(context, null);
@@ -62,23 +56,31 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         mScroller = new OverScroller(context);
         ViewConfiguration configuration = ViewConfiguration.get(context);
         mMinimumFlingVelocity = configuration.getScaledMinimumFlingVelocity();
-        mScreenHeightPixels = getResources().getDisplayMetrics().heightPixels;
     }
 
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
+        ensureNestedScrollingChild();
+    }
+
+    private void ensureNestedScrollingChild() {
+        if (mNestedScrollingChild != null) {
+            return;
+        }
 
         int count = getChildCount();
         for (int i = 0; i < count; i++) {
             View child = getChildAt(i);
             if (child instanceof RecyclerView) {
-                mContentView = child;
+                mNestedScrollingChild = new NestedScrollingChildWrapper(this, child);
                 break;
             }
         }
 
-        ensureContentView();
+        if (mNestedScrollingChild == null) {
+            throw new RuntimeException("mNestedScrollingChild cannot be null !");
+        }
     }
 
     @Override
@@ -94,7 +96,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     @Override
     public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int axes, int type) {
         log("onStartNestedScroll:  " + "  axes:" + axes + "  type:" + type);
-        return target instanceof RecyclerView && (axes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
+        return mNestedScrollingChild != null && mNestedScrollingChild.onStartNestedScroll(child, target, axes, type);
     }
 
     @Override
@@ -114,32 +116,29 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     @Override
     public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed) {
-//        Log.i(TAG, "onNestedPreScroll 1");
         onNestedPreScroll(target, dx, dy, consumed, ViewCompat.TYPE_TOUCH);
     }
 
     @Override
     public void onNestedPreScroll(@NonNull View target, int dx, int dy, @NonNull int[] consumed, int type) {
         onNestedScrollInternal(dy, type, consumed);
-        Log.i(TAG, "onNestedPreScroll 2: dy:" + dy + "  consumed:" + consumed[1]);
+        log("onNestedPreScroll: dy:" + dy + "  consumed:" + consumed[1]);
     }
 
     @Override
     public void onNestedScroll(@NonNull View target, int dxConsumed, int dyConsumed, int dxUnconsumed, int dyUnconsumed) {
-//        Log.i(TAG, "onNestedScroll 1");
         onNestedScroll(target, dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, ViewCompat.TYPE_TOUCH);
     }
 
     @Override
     public void onNestedScroll(@NonNull View target, int dxConsumed, int dyConsumed, int dxUnconsumed, int dyUnconsumed, int type) {
-//        Log.i(TAG, "onNestedScroll 2");
         onNestedScroll(target, dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, type, mNestedScrollingV2ConsumedCompat);
     }
 
     @Override
     public void onNestedScroll(@NonNull View target, int dxConsumed, int dyConsumed, int dxUnconsumed, int dyUnconsumed, int type, @NonNull int[] consumed) {
         onNestedScrollInternal(dyUnconsumed, type, consumed);
-        Log.i(TAG, "onNestedScroll 3: dyConsumed:"  + dyConsumed + "   dyUnconsumed:" + dyUnconsumed);
+        log("onNestedScroll: dyConsumed:"  + dyConsumed + "   dyUnconsumed:" + dyUnconsumed);
 
         if (type == ViewCompat.TYPE_NON_TOUCH && dyUnconsumed != 0 && !mScroller.isFinished() && mockFlingRunnable != null) {
             //NestedScrollingChild fling到了边界，不能再消耗滚动距离，开启过度滚动并回弹
@@ -154,10 +153,8 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     @Override
     public boolean onNestedPreFling(@NonNull View target, float velocityX, float velocityY) {
-        Log.i(TAG, "onNestedPreFling : velocityX:"  + velocityX + "   velocityY:" + velocityY + "   translationY:" + target.getTranslationY());
-
-        int translationY = getContentVewVirtualTranslationY();
-        if (translationY != 0) {
+        log("onNestedPreFling : velocityX:"  + velocityX + "   velocityY:" + velocityY + "   translationY:" + target.getTranslationY());
+        if (mNestedScrollingChild != null && mNestedScrollingChild.getTranslationY() != 0) {
             springBack();
             return true;
         }
@@ -166,7 +163,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     @Override
     public boolean onNestedFling(@NonNull View target, float velocityX, float velocityY, boolean consumed) {
-        Log.i(TAG, "onNestedFling : velocityX:"  + velocityX + "   velocityY:" + velocityY + "  consumed:" + consumed);
+        log("onNestedFling : velocityX:"  + velocityX + "   velocityY:" + velocityY + "  consumed:" + consumed);
         if (consumed) {
             mockNestedScrollingChildFling(target, -(int) velocityY);
         }
@@ -182,8 +179,9 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     public void onStopNestedScroll(@NonNull View target, int type) {
         int oldNestedScrollAxes = getNestedScrollAxes();
         mNestedScrollingParentHelper.onStopNestedScroll(target, type);
+
         int nestedScrollAxes = getNestedScrollAxes();
-        int translationY = getContentVewVirtualTranslationY();
+        float translationY = target.getTranslationY();
         log("onStopNestedScroll:" +
                 "  type:" + type +
                 "  translationY:" + translationY +
@@ -191,22 +189,22 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
                 "  oldNestedScrollAxes:" + oldNestedScrollAxes
         );
 
-        //回弹，触摸滚动和惯性滚动都停止的情况下，target不在原位置，则触发回弹
-        if (nestedScrollAxes == ViewGroup.SCROLL_AXIS_NONE) {
+        if (nestedScrollAxes == ViewGroup.SCROLL_AXIS_NONE && mNestedScrollingChild != null) {
+            //回弹，触摸滚动和惯性滚动都停止的情况下，target不在原位置，则触发回弹
             springBack();
         }
     }
 
     public void onNestedScrollInternal(int dy, int type, @NonNull int[] consumed) {
-        if (dy == 0 || type == ViewCompat.TYPE_NON_TOUCH) return;
+        if (dy == 0 || type == ViewCompat.TYPE_NON_TOUCH || mNestedScrollingChild == null) return;
 
-        int translationY = getContentVewVirtualTranslationY();
+        int translationY = mNestedScrollingChild.getTranslationY();
 
         int newTranslationY = translationY;
 
         if (dy < 0) {
             // dy < 0  手指向下滑动
-            if (!contentViewCanScrollDown()) {
+            if (!mNestedScrollingChild.canScrollDown()) {
                 //target的内容不能向下移动
 
                 //向下过度移动target
@@ -219,7 +217,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
             }
         } else {
             // dy > 0  手指向上滑动
-            if (!contentViewCanScrollUp()) {
+            if (!mNestedScrollingChild.canScrollUp()) {
                 //target的内容不能向上移动
 
                 //向上恢复target的位置
@@ -233,104 +231,13 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         }
 
         if (translationY != newTranslationY) {
-            translateContentView(newTranslationY);
+            mNestedScrollingChild.translateY(newTranslationY);
             consumed[1] += (int) (translationY - newTranslationY);
         }
     }
 
-    private int getContentVewVirtualTranslationY() {
-        return mContentVewVirtualTranslationY;
-    }
-
-    private int getContentVewActualTranslationY() {
-        return mContentVewActualTranslationY;
-    }
-
-    private void setContentViewTranslationY(int virtualTranslationY, int actualTranslationY) {
-        ensureContentView();
-        mContentVewVirtualTranslationY = virtualTranslationY;
-        mContentVewActualTranslationY = actualTranslationY;
-        mContentView.setTranslationY(actualTranslationY);
-        Log.i(TAG, "setContentViewTranslationY: Virtual:" + virtualTranslationY + "  actual:" + actualTranslationY);
-    }
-
-    private void translateContentView(int translationY) {
-        int computedTranslationY = computeDampedSlipDistance(translationY);
-        setContentViewTranslationY(translationY, computedTranslationY);
-    }
-
-    private void ensureContentView() {
-        if (mContentView == null) {
-            throw new RuntimeException("mContentView cannot be null !");
-        }
-    }
-
-    private boolean contentViewCanScrollUp(){
-        //view.canScrollVertically
-        //传正值，view内容是否可以向坐标轴负方向移动（垂直向下为正，水平向右为正），列表的滚轴向下移动，即向下滚动
-        //传负值，view内容是否可以向坐标轴正方向移动（垂直向下为正，水平向右为正），列表的滚轴向上移动，即向上滚动
-        ensureContentView();
-        return mContentView.canScrollVertically(1);
-    }
-
-    private boolean contentViewCanScrollDown(){
-        //view.canScrollVertically
-        //传正值，view内容是否可以向坐标轴负方向移动（垂直向下为正，水平向右为正），列表的滚轴向下移动，即向下滚动
-        //传负值，view内容是否可以向坐标轴正方向移动（垂直向下为正，水平向右为正），列表的滚轴向上移动，即向上滚动
-        ensureContentView();
-        return mContentView.canScrollVertically(-1);
-    }
-
-    private void log(String text) {
-        if (DEBUG) Log.i(TAG, text);
-    }
-
-    /**
-     * 计算阻尼滑动距离
-     *
-     * 公式 y = M(1-100^(-x/H))
-     *
-     * M：过度滑动的最大距离
-     * H：阻尼系数，H值越大，阻尼越大
-     *
-     * @param translation 原始应该滑动的距离
-     * @return int, 计算结果
-     */
-    public int computeDampedSlipDistance(int translation) {
-        //translationY > 0  说明target的真实位置向下移动了
-
-        if (translation == 0) {
-            return 0;
-        }
-
-        int x = Math.abs(translation);
-        int M = getOverScrollMaxDistance();
-        double H = M * 8.75;
-
-        //公式 y = M(1-100^(-x/H))
-        double y = (M * (1 - Math.pow(100, -x / H)));
-        return (int) (y * (translation / x));
-    }
-
-    public int reverseComputeDampedSlipDistance(int distance) {
-        if (distance == 0) {
-            return 0;
-        }
-
-        int y = Math.abs(distance);
-        double M = getOverScrollMaxDistance();
-        double H = M * 8.75;
-
-        double x = (Math.log(1 - y / M) / Math.log(100) * (-H));
-        return (int) (x * (distance / y));
-    }
-
-    public int getOverScrollMaxDistance() {
-        return Math.max(mScreenHeightPixels * 2 / 3, getHeight());
-    }
-
     public void abortAnimation(){
-        Log.i(TAG, "abortAnimation: ");
+        log("abortAnimation: ");
         if (!mScroller.isFinished()) {
             mScroller.abortAnimation();
         }
@@ -347,7 +254,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     }
 
     private void mockNestedScrollingChildFling(View target, int velocityY) {
-        Log.i(TAG, "mockNestedScrollingChildFling: velocityY:  " + velocityY);
+        log("mockNestedScrollingChildFling: velocityY:  " + velocityY);
         mScroller.fling(0, 0, 0, velocityY, 0, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
         mockFlingRunnable = new MockFlingRunnable(target, velocityY);
         ViewCompat.postOnAnimation(target, mockFlingRunnable);
@@ -376,7 +283,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
                 //这个值没有正负，正负根据initialVelocityY修正
                 float currVelocity = getCurrVelocity();
-                Log.i(TAG, "MockFlingRunnable run: "
+                log("MockFlingRunnable run: "
                         + "  currVelocity:" + currVelocity
                         + "  >= :" + (Math.abs(currVelocity) >= mMinimumFlingVelocity)
                 );
@@ -395,11 +302,11 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
      * 惯性滑动后回弹动画
      */
     private void overScroll(@NonNull View target, int velocityY) {
-        Log.i(TAG, "overScroll: "
+        log("overScroll: "
                 + "  velocityY:" + velocityY
                 + "  translationY:" + target.getTranslationY()
-                + "  canScrollDown:" + contentViewCanScrollDown()
-                + "  canScrollUp:" + contentViewCanScrollUp()
+                + "  canScrollDown:" + mNestedScrollingChild.canScrollDown()
+                + "  canScrollUp:" + mNestedScrollingChild.canScrollUp()
         );
         mOverScrollRunnable = new OverScrollRunnable(target, velocityY);
         ViewCompat.postOnAnimation(target, mOverScrollRunnable);
@@ -428,13 +335,13 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
                 float t = 1f * (now - mLastTime) / 1000;
                 float velocity = mVelocity * t;
 
-                Log.i(TAG, "OverScrollRunnable run: " + mVelocity + "  " + velocity);
+                log("OverScrollRunnable run: " + mVelocity + "  " + velocity);
 
                 // 还有速度时，就加剧过度滑动
                 if (Math.abs(velocity) >= 1) {
                     mLastTime = now;
                     mOffset += velocity;
-                    translateContentView(mOffset);
+                    mNestedScrollingChild.translateY(mOffset);
                     ViewCompat.postOnAnimation(view, this);
                 } else {
                     // 没有速度后，通过 reboundAnimator，回弹至初始位置
@@ -446,13 +353,12 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     }
 
     private void springBack(){
-        ensureContentView();
-
-        int translationY = getContentVewVirtualTranslationY();
+        int translationY = mNestedScrollingChild.getTranslationY();
         if (translationY != 0 && mScroller.springBack(0, translationY, 0, 0, 0, 0)) {
-            Log.i(TAG, "springBack: translationY: " + translationY);
-            mSpringBackRunnable = new SpringBackRunnable(mContentView);
-            ViewCompat.postOnAnimation(mContentView, mSpringBackRunnable);
+            log("springBack: translationY: " + translationY);
+            View contentView = mNestedScrollingChild.getContentView();
+            mSpringBackRunnable = new SpringBackRunnable(contentView);
+            ViewCompat.postOnAnimation(contentView, mSpringBackRunnable);
         }
     }
 
@@ -467,10 +373,137 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         @Override
         public void run() {
             if (mScroller.computeScrollOffset()) {
-                Log.i(TAG, "SpringBackRunnable run: " + mScroller.getCurrY());;
-                translateContentView(mScroller.getCurrY());
+                log("SpringBackRunnable run: " + mScroller.getCurrY());
+                if (mNestedScrollingChild != null) {
+                    mNestedScrollingChild.translateY(mScroller.getCurrY());
+                }
                 ViewCompat.postOnAnimation(view, this);
             }
         }
     }
+
+    protected static void log(String text) {
+        if (DEBUG) Log.i(TAG, text);
+    }
+
+
+    public static class NestedScrollingChildWrapper {
+        private View mContentView;
+        private View mScrollView;
+
+        //滚动view虚拟的位移距离，因为有阻尼，实际没有消耗这么多
+        private int mVirtualTranslationY = 0;
+        //滚动view实际的位移距离
+        private int mActualTranslationY = 0;
+
+        private int mScreenHeightPixels;
+
+        public NestedScrollingChildWrapper(@NonNull OverScrollLayout overScrollLayout, @NonNull View scrollView) {
+            this.mScrollView = scrollView;
+
+            mContentView = mScrollView;
+            while (mContentView.getParent() != overScrollLayout) {
+                ViewParent parent = mContentView.getParent();
+                if (parent instanceof View) {
+                    mContentView = (View) parent;
+                }
+            }
+
+            mScreenHeightPixels = scrollView.getResources().getDisplayMetrics().heightPixels;
+
+            //不显示滚动到头的阴影
+            mScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        }
+
+        public View getScrollView() {
+            return mScrollView;
+        }
+
+        public View getContentView(){
+            return mContentView;
+        }
+
+        public int getTranslationY() {
+            return mVirtualTranslationY;
+        }
+
+        public int getActualTranslationY() {
+            return mActualTranslationY;
+        }
+
+        private void setTranslationY(int virtualTranslationY, int actualTranslationY) {
+            mVirtualTranslationY = virtualTranslationY;
+            mActualTranslationY = actualTranslationY;
+            mContentView.setTranslationY(actualTranslationY);
+            log("setContentViewTranslationY: Virtual:" + virtualTranslationY + "  actual:" + actualTranslationY);
+        }
+
+        public void translateY(int translationY) {
+            int computedTranslationY = computeDampedSlipDistance(translationY);
+            setTranslationY(translationY, computedTranslationY);
+        }
+
+        public boolean canScrollUp(){
+            //view.canScrollVertically
+            //传正值，view内容是否可以向坐标轴负方向移动（垂直向下为正，水平向右为正），列表的滚轴向下移动，即向下滚动
+            //传负值，view内容是否可以向坐标轴正方向移动（垂直向下为正，水平向右为正），列表的滚轴向上移动，即向上滚动
+            return mScrollView.canScrollVertically(1);
+        }
+
+        public boolean canScrollDown(){
+            //view.canScrollVertically
+            //传正值，view内容是否可以向坐标轴负方向移动（垂直向下为正，水平向右为正），列表的滚轴向下移动，即向下滚动
+            //传负值，view内容是否可以向坐标轴正方向移动（垂直向下为正，水平向右为正），列表的滚轴向上移动，即向上滚动
+            return mScrollView.canScrollVertically(-1);
+        }
+
+        /**
+         * 计算阻尼滑动距离
+         *
+         * 公式 y = M(1-100^(-x/H))
+         *
+         * M：过度滑动的最大距离
+         * H：阻尼系数，H值越大，阻尼越大
+         *
+         * @param translation 原始应该滑动的距离
+         * @return int, 计算结果
+         */
+        public int computeDampedSlipDistance(int translation) {
+            //translationY > 0  说明target的真实位置向下移动了
+
+            if (translation == 0) {
+                return 0;
+            }
+
+            int x = Math.abs(translation);
+            int M = getOverScrollMaxDistance();
+            double H = M * 8.75;
+
+            //公式 y = M(1-100^(-x/H))
+            double y = (M * (1 - Math.pow(100, -x / H)));
+            return (int) (y * (translation / x));
+        }
+
+        public int reverseComputeDampedSlipDistance(int distance) {
+            if (distance == 0) {
+                return 0;
+            }
+
+            int y = Math.abs(distance);
+            double M = getOverScrollMaxDistance();
+            double H = M * 8.75;
+
+            double x = (Math.log(1 - y / M) / Math.log(100) * (-H));
+            return (int) (x * (distance / y));
+        }
+
+        public int getOverScrollMaxDistance() {
+            return Math.max(mScreenHeightPixels * 2 / 3, mContentView.getHeight());
+        }
+
+        public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int axes, int type) {
+            return target == mScrollView && (axes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
+        }
+    }
+
 }
