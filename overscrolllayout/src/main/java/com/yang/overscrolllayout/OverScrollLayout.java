@@ -1,6 +1,7 @@
 package com.yang.overscrolllayout;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -36,6 +37,9 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     private Runnable mOverScrollRunnable = null;
     private Runnable mSpringBackRunnable = null;
 
+    private int mScrollViewId = View.NO_ID;
+    private Axes mAxis = Axes.VERTICAL;
+
     private NestedScrollingChildWrapper mNestedScrollingChild = null;
 
     public OverScrollLayout(@NonNull Context context) {
@@ -48,10 +52,12 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     public OverScrollLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init(context);
-    }
 
-    private void init(Context context) {
+        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.OverScrollLayout);
+        mScrollViewId = a.getResourceId(R.styleable.OverScrollLayout_oslScrollView, mScrollViewId);
+        mAxis = Axes.values[a.getInt(R.styleable.OverScrollLayout_oslAxis, mAxis.getArrayIndex())];
+        a.recycle();
+
         mNestedScrollingParentHelper = new NestedScrollingParentHelper(this);
         mScroller = new OverScroller(context);
         ViewConfiguration configuration = ViewConfiguration.get(context);
@@ -61,26 +67,39 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
-        ensureNestedScrollingChild();
+        if (mScrollViewId != View.NO_ID) {
+            View view = findViewById(mScrollViewId);
+            if (view == null) {
+                throw new RuntimeException("xml中app:oslScrollView配置的view找不到");
+            }
+            setNestedScrollingChild(view);
+        } else {
+            //如果xml中没有配置app:oslScrollVie，默认从子view中查找第一个可滚动的view
+            View view = findScrollView();
+            if (view != null) {
+                setNestedScrollingChild(view);
+            }
+        }
     }
 
-    private void ensureNestedScrollingChild() {
-        if (mNestedScrollingChild != null) {
-            return;
-        }
+    public void setNestedScrollingChild(@NonNull View view) {
+        mNestedScrollingChild = new NestedScrollingChildWrapper(this, view);
+    }
 
+    @Nullable
+    public View findScrollView() {
         int count = getChildCount();
         for (int i = 0; i < count; i++) {
             View child = getChildAt(i);
             if (child instanceof RecyclerView) {
-                mNestedScrollingChild = new NestedScrollingChildWrapper(this, child);
-                break;
+                return child;
             }
         }
+        return null;
+    }
 
-        if (mNestedScrollingChild == null) {
-            throw new RuntimeException("mNestedScrollingChild cannot be null !");
-        }
+    public void setAxes(Axes axes) {
+        mAxis = axes;
     }
 
     @Override
@@ -96,7 +115,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     @Override
     public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int axes, int type) {
         log("onStartNestedScroll:  " + "  axes:" + axes + "  type:" + type);
-        return mNestedScrollingChild != null && mNestedScrollingChild.onStartNestedScroll(child, target, axes, type);
+        return mAxis.compareNestedScrollAxes(axes) & mNestedScrollingChild != null && mNestedScrollingChild.getScrollView() == target;
     }
 
     @Override
@@ -500,10 +519,39 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         public int getOverScrollMaxDistance() {
             return Math.max(mScreenHeightPixels * 2 / 3, mContentView.getHeight());
         }
-
-        public boolean onStartNestedScroll(@NonNull View child, @NonNull View target, int axes, int type) {
-            return target == mScrollView && (axes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
-        }
     }
 
+
+    public static class Axes {
+
+        public static final Axes NONE = new Axes(0, ViewCompat.SCROLL_AXIS_NONE);
+        public static final Axes HORIZONTAL = new Axes(1, ViewCompat.SCROLL_AXIS_HORIZONTAL);
+        public static final Axes VERTICAL = new Axes(2, ViewCompat.SCROLL_AXIS_VERTICAL);
+
+        public static final Axes[] values = new Axes[]{
+                NONE,
+                HORIZONTAL,
+                VERTICAL
+        };
+
+        private final int arrayIndex;
+        private final int nestedScrollAxes;
+
+        public Axes(int arrayIndex, int nestedScrollAxes) {
+            this.arrayIndex = arrayIndex;
+            this.nestedScrollAxes = nestedScrollAxes;
+        }
+
+        public int getNestedScrollAxes() {
+            return nestedScrollAxes;
+        }
+
+        public int getArrayIndex() {
+            return arrayIndex;
+        }
+
+        public boolean compareNestedScrollAxes(int nestedScrollAxes) {
+            return (this.nestedScrollAxes & nestedScrollAxes) != 0;
+        }
+    }
 }

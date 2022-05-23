@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <attr name="oslScrollView" format="reference"/>
+    <attr name="oslAxis" format="enum">
+        <enum name="none" value="0" />
+        <enum name="horizontal" value="1" />
+        <enum name="vertical" value="2" />
+    </attr>
+
+    <declare-styleable name="OverScrollLayout">
+        <attr name="oslScrollView"/>
+        <attr name="oslAxis"/>
+    </declare-styleable>
+
+</resources>

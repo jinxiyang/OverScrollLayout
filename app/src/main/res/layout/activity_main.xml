@@ -1,32 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/frameContainer"
+<com.yang.overscrolllayout.OverScrollLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#f7f7f7"
+    app:oslAxis="vertical"
+    app:oslScrollView="@id/recyclerView">
 
-    <com.yang.overscrolllayout.OverScrollLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:background="@android:color/holo_blue_light"
-            android:layout_gravity="top"/>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:background="@android:color/holo_green_light"
-            android:layout_gravity="bottom"/>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@android:color/darker_gray"/>
+            android:background="#ffffff"/>
 
-    </com.yang.overscrolllayout.OverScrollLayout>
+        <View
+            android:layout_width="15dp"
+            android:layout_height="300dp"
+            android:layout_gravity="right|center_vertical"
+            android:background="@android:color/holo_blue_light" />
 
+    </FrameLayout>
 
-</FrameLayout>
+</com.yang.overscrolllayout.OverScrollLayout>
