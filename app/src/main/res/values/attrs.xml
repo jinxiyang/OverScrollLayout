@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <attr name="contextList" format="integer"/>
-    
-    <declare-styleable name="OverScrollLayout">
-        <attr name="contextList"/>
-    </declare-styleable>
+<!--    <attr name="contextList" format="integer"/>-->
+<!--    -->
+<!--    <declare-styleable name="OverScrollLayout">-->
+<!--        <attr name="contextList"/>-->
+<!--    </declare-styleable>-->
 
 </resources>

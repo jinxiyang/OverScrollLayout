@@ -5,6 +5,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,6 +30,10 @@ public class SimpleAdapter extends RecyclerView.Adapter<SimpleAdapter.SimpleVH> 
     @Override
     public void onBindViewHolder(@NonNull SimpleVH holder, int position) {
         holder.textView.setText(String.valueOf(position));
+        final int p = position;
+        holder.itemView.setOnClickListener(v -> {
+            Toast.makeText(v.getContext(), "您点击了" + p + "个", Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Override
