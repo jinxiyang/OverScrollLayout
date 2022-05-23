@@ -34,7 +34,15 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     private int mScreenHeightPixels;
 
     private View mContentView;
+
+    //滚动view虚拟的位移距离，因为有阻尼，实际没有消耗这么多
+    private int mContentVewVirtualTranslationY = 0;
+    //滚动views实际的位移距离
+    private int mContentVewActualTranslationY = 0;
+
     private MockFlingRunnable mockFlingRunnable;
+    private Runnable mOverScrollRunnable = null;
+    private Runnable mSpringBackRunnable = null;
 
     public OverScrollLayout(@NonNull Context context) {
         this(context, null);
@@ -70,9 +78,7 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
             }
         }
 
-        if (mContentView == null) {
-            throw new RuntimeException("cannot find mContentView");
-        }
+        ensureContentView();
     }
 
     @Override
@@ -191,51 +197,6 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         }
     }
 
-    private void mockNestedScrollingChildFling(View target, int velocityY) {
-        Log.i(TAG, "mockNestedScrollingChildFling: velocityY:  " + velocityY);
-        mScroller.fling(0, 0, 0, velocityY, 0, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
-        mockFlingRunnable = new MockFlingRunnable(target, velocityY);
-        ViewCompat.postOnAnimation(target, mockFlingRunnable);
-    }
-
-    private class MockFlingRunnable implements Runnable {
-
-        private final View view;
-
-        //速度正负纠正因子
-        private final int factor;
-
-        public MockFlingRunnable(View view, int velocity) {
-            this.view = view;
-            if (velocity == 0) {
-                factor = 1;
-            } else {
-                factor = velocity / Math.abs(velocity);
-            }
-        }
-
-        @Override
-        public void run() {
-            if (mScroller.computeScrollOffset()) {
-                ViewCompat.postOnAnimation(view, this);
-
-                //这个值没有正负，正负根据initialVelocityY修正
-                float currVelocity = getCurrVelocity();
-                Log.i(TAG, "MockFlingRunnable run: "
-                        + "  currVelocity:" + currVelocity
-                        + "  >= :" + (Math.abs(currVelocity) >= mMinimumFlingVelocity)
-                );
-            }
-        }
-
-        public float getCurrVelocity(){
-            if (mScroller.isFinished()) {
-                return 0;
-            }
-            return factor * mScroller.getCurrVelocity();
-        }
-    }
-
     public void onNestedScrollInternal(int dy, int type, @NonNull int[] consumed) {
         if (dy == 0 || type == ViewCompat.TYPE_NON_TOUCH) return;
 
@@ -276,11 +237,6 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
             consumed[1] += (int) (translationY - newTranslationY);
         }
     }
-
-    //滚动view虚拟的位移距离，因为有阻尼，实际没有消耗这么多
-    private int mContentVewVirtualTranslationY = 0;
-    //滚动views实际的位移距离
-    private int mContentVewActualTranslationY = 0;
 
     private int getContentVewVirtualTranslationY() {
         return mContentVewVirtualTranslationY;
@@ -324,20 +280,6 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         ensureContentView();
         return mContentView.canScrollVertically(-1);
     }
-
-    public void abortAnimation(){
-        Log.i(TAG, "abortAnimation: ");
-        if (!mScroller.isFinished()) {
-            mScroller.abortAnimation();
-        }
-        if (mOverScrollRunnable != null) {
-            mOverScrollRunnable = null;
-        }
-        if (mockFlingRunnable != null) {
-            mockFlingRunnable = null;
-        }
-    }
-
 
     private void log(String text) {
         if (DEBUG) Log.i(TAG, text);
@@ -387,8 +329,67 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         return Math.max(mScreenHeightPixels * 2 / 3, getHeight());
     }
 
-    Runnable mOverScrollRunnable = null;
-    Runnable mSpringBackRunnable = null;
+    public void abortAnimation(){
+        Log.i(TAG, "abortAnimation: ");
+        if (!mScroller.isFinished()) {
+            mScroller.abortAnimation();
+        }
+        if (mOverScrollRunnable != null) {
+            mOverScrollRunnable = null;
+        }
+        if (mockFlingRunnable != null) {
+            mockFlingRunnable = null;
+        }
+
+        if (mSpringBackRunnable != null) {
+            mSpringBackRunnable = null;
+        }
+    }
+
+    private void mockNestedScrollingChildFling(View target, int velocityY) {
+        Log.i(TAG, "mockNestedScrollingChildFling: velocityY:  " + velocityY);
+        mScroller.fling(0, 0, 0, velocityY, 0, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        mockFlingRunnable = new MockFlingRunnable(target, velocityY);
+        ViewCompat.postOnAnimation(target, mockFlingRunnable);
+    }
+
+    private class MockFlingRunnable implements Runnable {
+
+        private final View view;
+
+        //速度正负纠正因子
+        private final int factor;
+
+        public MockFlingRunnable(View view, int velocity) {
+            this.view = view;
+            if (velocity == 0) {
+                factor = 1;
+            } else {
+                factor = velocity / Math.abs(velocity);
+            }
+        }
+
+        @Override
+        public void run() {
+            if (mScroller.computeScrollOffset()) {
+                ViewCompat.postOnAnimation(view, this);
+
+                //这个值没有正负，正负根据initialVelocityY修正
+                float currVelocity = getCurrVelocity();
+                Log.i(TAG, "MockFlingRunnable run: "
+                        + "  currVelocity:" + currVelocity
+                        + "  >= :" + (Math.abs(currVelocity) >= mMinimumFlingVelocity)
+                );
+            }
+        }
+
+        public float getCurrVelocity(){
+            if (mScroller.isFinished()) {
+                return 0;
+            }
+            return factor * mScroller.getCurrVelocity();
+        }
+    }
 
     /**
      * 惯性滑动后回弹动画
