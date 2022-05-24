@@ -4,50 +4,86 @@ import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SimpleAdapter extends RecyclerView.Adapter<SimpleAdapter.SimpleVH> {
+
+    private int itemWidth;
+    private int itemHeight;
+    private int count;
+
+    private List<String> list;
+
+    private OnClickItemListener onClickItemListener;
+
+    public SimpleAdapter(int itemWidth, int itemHeight, int count) {
+        this.itemWidth = itemWidth;
+        this.itemHeight = itemHeight;
+        this.count = count;
+
+        list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(String.valueOf(i));
+        }
+    }
+
+    public SimpleAdapter(List<String> list) {
+        this.itemWidth = ViewGroup.LayoutParams.MATCH_PARENT;
+        this.itemHeight = 240;
+        this.list = list;
+        this.count = list.size();
+    }
+
+    public void setOnClickItemListener(OnClickItemListener onClickItemListener) {
+        this.onClickItemListener = onClickItemListener;
+    }
 
     @NonNull
     @Override
     public SimpleVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        TextView textView = new TextView(parent.getContext());
-//        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(600, ViewGroup.LayoutParams.MATCH_PARENT, 600);
-        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(600, ViewGroup.LayoutParams.MATCH_PARENT);
-        params.topMargin = 10;
-        params.bottomMargin = 10;
-        textView.setLayoutParams(params);
-        textView.setTextSize(14f);
-        textView.setGravity(Gravity.CENTER);
-        textView.setTextColor(Color.WHITE);
-        textView.setBackgroundColor(Color.GRAY);
-        return new SimpleVH(textView);
+        Button button = new Button(parent.getContext());
+        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(itemWidth, itemHeight);
+        button.setLayoutParams(params);
+        button.setTextSize(14f);
+        button.setGravity(Gravity.CENTER);
+        button.setTextColor(Color.BLACK);
+        return new SimpleVH(button);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SimpleVH holder, int position) {
-        holder.textView.setText(String.valueOf(position));
+        holder.button.setText(list.get(position));
         final int p = position;
         holder.itemView.setOnClickListener(v -> {
-            Toast.makeText(v.getContext(), "您点击了" + p + "个", Toast.LENGTH_SHORT).show();
+            if (onClickItemListener != null) {
+                onClickItemListener.onClickItem(p);
+            }
         });
     }
 
     @Override
     public int getItemCount() {
-        return 8;
+        return count;
     }
 
     static class SimpleVH extends RecyclerView.ViewHolder{
-        TextView textView;
+        Button button;
 
         public SimpleVH(@NonNull View itemView) {
             super(itemView);
-            textView = (TextView) itemView;
+            button = (Button) itemView;
         }
     }
+
+    public interface OnClickItemListener {
+        void onClickItem(int position);
+    }
+
 }

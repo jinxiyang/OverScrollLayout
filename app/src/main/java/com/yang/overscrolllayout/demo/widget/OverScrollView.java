@@ -1,4 +1,4 @@
-package com.yang.overscrolllayout.demo;
+package com.yang.overscrolllayout.demo.widget;
 
 import android.content.Context;
 import android.util.AttributeSet;

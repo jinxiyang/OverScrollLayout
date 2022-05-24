@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.yang.overscrolllayout.OverScrollLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/overScrollLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#777777"
+    app:oslAxis="horizontal"
+    app:oslOverScrollDistanceFactor="0.5"
+    app:oslScrollView="@id/recyclerView">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:background="#ffffff"/>
+
+    <TextView
+        android:id="@+id/tvTrack"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:textSize="16sp"
+        android:textColor="#222222"
+        android:layout_gravity="center_vertical"
+        />
+
+</com.yang.overscrolllayout.OverScrollLayout>

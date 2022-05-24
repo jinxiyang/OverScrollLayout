@@ -38,7 +38,6 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
 
     private MockFlingRunnable mMockFlingRunnable;
     private Runnable mOverScrollRunnable = null;
-    private Runnable mSpringBackRunnable = null;
 
     //滚动view的id
     private int mScrollViewId = View.NO_ID;
@@ -246,7 +245,9 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         if (type == ViewCompat.TYPE_NON_TOUCH && (dxUnconsumed != 0 || dyUnconsumed != 0) && !mScroller.isFinished() && mMockFlingRunnable != null) {
             //NestedScrollingChild fling到了边界，不能再消耗滚动距离，开启过度滚动并回弹
 
+            //这个速度和onNestedPreFling、onNestedFling的速度不是一个数量级的
             float currVelocity = mMockFlingRunnable.getCurrVelocity();
+
             abortAnimation();
             if (Math.abs(currVelocity) >= mMinimumFlingVelocity) {
                 overScroll(target, (int) currVelocity);
@@ -268,9 +269,9 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         log("onNestedFling : velocityX:"  + velocityX + "   velocityY:" + velocityY + "  consumed:" + consumed);
         if (consumed) {
             if (mAxis == Axes.HORIZONTAL) {
-                mockNestedScrollingChildFling(target, -(int) velocityX);
+                mockFling(target, -(int) velocityX);
             } else {
-                mockNestedScrollingChildFling(target, -(int) velocityY);
+                mockFling(target, -(int) velocityY);
             }
         }
         return false;
@@ -393,21 +394,17 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     public void abortAnimation(){
         log("abortAnimation: ");
         if (!mScroller.isFinished()) {
+            //会中断springBack、mockFling
             mScroller.abortAnimation();
         }
         if (mOverScrollRunnable != null) {
+            //会中断overScroll
             mOverScrollRunnable = null;
         }
-        if (mMockFlingRunnable != null) {
-            mMockFlingRunnable = null;
-        }
-
-        if (mSpringBackRunnable != null) {
-            mSpringBackRunnable = null;
-        }
+        mMockFlingRunnable = null;
     }
 
-    private void mockNestedScrollingChildFling(View target, int velocity) {
+    private void mockFling(View target, int velocity) {
         log("mockNestedScrollingChildFling: velocity:  " + velocity);
         //模拟滚动view的fling事件，统一fling在Y轴上，我们只是要一个模拟的滚动速度，和坐标轴没关系。
         mScroller.fling(0, 0, 0, velocity, 0, 0, Integer.MIN_VALUE, Integer.MAX_VALUE);
@@ -515,8 +512,8 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
         int translationY = mScrollView.getTranslationY();
         if ((translationX != 0 || translationY != 0) && mScroller.springBack(translationX, translationY, 0, 0, 0, 0)) {
             log("springBack: translationX: " + translationX + "  translationY:" + translationY);
-            mSpringBackRunnable = new SpringBackRunnable(mScrollView);
-            ViewCompat.postOnAnimation(mScrollView.getContentView(), mSpringBackRunnable);
+            SpringBackRunnable runnable = new SpringBackRunnable(mScrollView);
+            ViewCompat.postOnAnimation(mScrollView.getContentView(), runnable);
             return true;
         }
         return false;
