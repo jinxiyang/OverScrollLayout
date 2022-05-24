@@ -2,6 +2,7 @@
 <resources>
 
     <attr name="oslScrollView" format="reference"/>
+    <attr name="oslOverScrollDistanceFactor" format="float"/>
     <attr name="oslAxis" format="enum">
         <enum name="none" value="0" />
         <enum name="horizontal" value="1" />
@@ -10,6 +11,7 @@
 
     <declare-styleable name="OverScrollLayout">
         <attr name="oslScrollView"/>
+        <attr name="oslOverScrollDistanceFactor"/>
         <attr name="oslAxis"/>
     </declare-styleable>
 

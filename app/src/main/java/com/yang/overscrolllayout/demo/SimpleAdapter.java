@@ -16,7 +16,8 @@ public class SimpleAdapter extends RecyclerView.Adapter<SimpleAdapter.SimpleVH> 
     @Override
     public SimpleVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         TextView textView = new TextView(parent.getContext());
-        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 600);
+//        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(600, ViewGroup.LayoutParams.MATCH_PARENT, 600);
+        ViewGroup.MarginLayoutParams params = new ViewGroup.MarginLayoutParams(600, ViewGroup.LayoutParams.MATCH_PARENT);
         params.topMargin = 10;
         params.bottomMargin = 10;
         textView.setLayoutParams(params);
