@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.core.view.NestedScrollingParent3;
 import androidx.core.view.NestedScrollingParentHelper;
 import androidx.core.view.ViewCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -110,7 +111,8 @@ public class OverScrollLayout extends FrameLayout implements NestedScrollingPare
     }
 
     public boolean isScrollView(View view) {
-        return view instanceof RecyclerView;
+        return view instanceof RecyclerView
+                || view instanceof NestedScrollView;
     }
 
     public void setAxes(Axes axes) {

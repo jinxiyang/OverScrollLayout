@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,7 +24,7 @@ public class MainActivity extends AppCompatActivity implements SimpleAdapter.OnC
         list.add("竖向的RecyclerView Demo");
         list.add("竖向嵌套的RecyclerView Demo");
         list.add("横向的RecyclerView Demo");
-
+        list.add("NestedScrollView Demo");
 
         SimpleAdapter adapter = new SimpleAdapter(list);
         recyclerView.setAdapter(adapter);
@@ -45,7 +44,9 @@ public class MainActivity extends AppCompatActivity implements SimpleAdapter.OnC
             case 2:
                 navigateToRecyclerViewHorizontal();
                 break;
-
+            case 3:
+                navigateToNestedScrollView();
+                break;
         }
     }
 
@@ -57,6 +58,11 @@ public class MainActivity extends AppCompatActivity implements SimpleAdapter.OnC
 
     private void navigateToRecyclerViewHorizontal() {
         Intent intent = new Intent(this, RecyclerViewHorizontalActivity.class);
+        startActivity(intent);
+    }
+
+    private void navigateToNestedScrollView() {
+        Intent intent = new Intent(this, NestedScrollViewActivity.class);
         startActivity(intent);
     }
 }

@@ -16,7 +16,7 @@ public class RecyclerViewHorizontalActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView( R.layout.activity_recycler_view_horizontal);
+        setContentView(R.layout.activity_recycler_view_horizontal);
 
         OverScrollLayout overScrollLayout = findViewById(R.id.overScrollLayout);
         TextView tvTrack = findViewById(R.id.tvTrack);
