@@ -2,6 +2,8 @@ plugins {
     id 'com.android.library'
 }
 
+//apply from: '../uploadMavenCentral.gradle'
+
 android {
     compileSdk 31
 

@@ -1,0 +1,102 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+
+//读取本地文件local.properties，获取maven仓库密码
+def localProps = new Properties()
+def localFile = new File(rootDir, 'local.properties')
+if (localFile.exists()) {
+    localProps.load(new FileInputStream(localFile))
+}
+
+def sonatypeUsername = localProps.getProperty("sonatypeUsername")
+def sonatypePassword = localProps.getProperty("sonatypePassword")
+
+def libVersion='0.1.0'
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set("sources")
+    // 源码路径，包含Java、kotlin代码
+    from android.sourceSets.main.java.getSrcDirs()
+    exclude "**/R.class"
+    exclude "**/BuildConfig.class"
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            // group id，发布后引用的依赖的 group id
+            groupId 'io.github.jinxiyang'
+            // 发布后引用的依赖的 artifact id
+            artifactId 'overscrolllayout'
+            // 发布的版本
+            version libVersion
+            // 发布的 arr 的文件和源码文件
+//            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+            afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
+            artifact androidSourcesJar
+            pom {
+                // 构件名称，可以自定义
+                name = 'OverScrollLayout'
+                // 构件描述
+                description = 'Android自定义控件，支持RecyclerView、NestedScrollView过度滚动并回弹'
+                // 构件主页
+                url = 'https://github.com/jinxiyang/OverScrollLayout'
+                // 许可证名称和地址
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                // 开发者信息
+                developers {
+                    developer {
+                        name = 'yangjinxi'
+                        email = '1137501600@qq.com'
+                    }
+                }
+                // 版本控制仓库地址
+                scm {
+                    url = 'https://github.com/jinxiyang/OverScrollLayout'
+                    connection = 'scm:git:github.com/jinxiyang/OverScrollLayout.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/jinxiyang/OverScrollLayout.git'
+                }
+            }
+
+            // pom文件中声明依赖，从而传递到使用方
+            pom.withXml {
+                def dependenciesNode = asNode().appendNode('dependencies')
+                configurations.implementation.allDependencies.each {
+                    // 避免出现空节点或 artifactId=unspecified 的节点
+                    if (it.group != null && (it.name != null && "unspecified" != it.name) && it.version != null) {
+                        println "dependency=${it.toString()}"
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                        dependencyNode.appendNode('scope', 'implementation')
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            // 发布的位置，这里根据发布的版本区分了 SNAPSHOT 和最终版本两种情况
+            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            url = libVersion.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+            credentials {
+                // 这里就是之前在 issues.sonatype.org 注册的账号
+                username sonatypeUsername
+                password sonatypePassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications
+}
