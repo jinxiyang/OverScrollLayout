@@ -3,16 +3,36 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven {
-            allowInsecureProtocol = true
-            url 'http://maven.aliyun.com/nexus/content/groups/public/'
-        }
+        jcenter()
+
+//        mavenLocal()//本地maven仓库
+//        maven {
+//            //release仓库地址
+//            url 'https://s01.oss.sonatype.org/content/repositories/releases'
+//            //snapshots仓库地址
+//            //url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+//        }
     }
     dependencies {
         classpath "com.android.tools.build:gradle:7.0.3"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
+    }
+}
+
+//注意allprojects配置，有的项目是在setting.gralde中配置的
+allprojects {
+    repositories {
+        mavenCentral()
+        google()
+//        mavenLocal()//本地maven仓库
+//        maven {
+//            //release仓库地址
+//            url 'https://s01.oss.sonatype.org/content/repositories/releases'
+//            //snapshots仓库地址
+//            //url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+//        }
     }
 }
 

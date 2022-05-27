@@ -1,18 +1,21 @@
+
+
+//       +---------------------------------------------------------------------------------------------------
+//       |    发布module到Maven服务器, 在Android Studio的Terminal下执行，注意命令中的module名                      |
+//       |                                                                                                  |
+//       |                                                                                                  |
+//       |    发布到中央仓库mavenCentral :      ./gradlew :overscrolllayout:publish                            |
+//       |                                                                                                  |
+//       |    发布到本地仓库mavenLocal   :      ./gradlew :overscrolllayout:publishToMavenLocal                |
+//       +---------------------------------------------------------------------------------------------------
+
+
 apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
-
-//读取本地文件local.properties，获取maven仓库密码
-def localProps = new Properties()
-def localFile = new File(rootDir, 'local.properties')
-if (localFile.exists()) {
-    localProps.load(new FileInputStream(localFile))
-}
-
-def sonatypeUsername = localProps.getProperty("sonatypeUsername")
-def sonatypePassword = localProps.getProperty("sonatypePassword")
-
-def libVersion='0.1.0'
+//发布aar的版本号，有-SNAPSHOT代表发布snapshot，没有则发release
+//def libVersion='0.1.3'
+def libVersion='0.1.3-SNAPSHOT'
 
 task androidSourcesJar(type: Jar) {
     archiveClassifier.set("sources")
@@ -31,8 +34,7 @@ publishing {
             artifactId 'overscrolllayout'
             // 发布的版本
             version libVersion
-            // 发布的 arr 的文件和源码文件
-//            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+            // 发布的aar，依赖bundleReleaseAar task，module要先构建出aar
             afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
             artifact androidSourcesJar
             pom {
@@ -83,13 +85,13 @@ publishing {
     }
     repositories {
         maven {
-            // 发布的位置，这里根据发布的版本区分了 SNAPSHOT 和最终版本两种情况
+            // 发布的仓库地址，这里根据发布的版本区分了release和snapshot版本两种情况
             def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
             def snapshotsRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-            url = libVersion.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            url = libVersion.endsWith('-SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
             credentials {
-                // 这里就是之前在 issues.sonatype.org 注册的账号
+                // 在 issues.sonatype.org 注册的账号和密码，在gradle.properties配置了
                 username sonatypeUsername
                 password sonatypePassword
             }
@@ -97,6 +99,7 @@ publishing {
     }
 }
 
+//签名，会使用gradle.properties配置的秘钥
 signing {
     sign publishing.publications
 }
